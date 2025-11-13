@@ -1,10 +1,16 @@
 -- =============================================================
---  🚀 CULTURAL EXPLORER — PostgreSQL Schema
---  Tables: users, venues, exhibitions, favorites
+--  🚀 CULTURAL EXPLORER — PostgreSQL Schema (VERSION STABLE)
+--  Designed for OpenData Paris + Paris Musées
 -- =============================================================
 
 -- ========================
---  EXTENSIONS (Optional)
+--  CLEAN PREVIOUS SCHEMA
+-- ========================
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public;
+
+-- ========================
+--  EXTENSIONS
 -- ========================
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
@@ -24,22 +30,22 @@ CREATE TABLE users (
 -- ========================
 CREATE TABLE venues (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(255) NOT NULL,
+    name TEXT NOT NULL,
     address TEXT,
     city VARCHAR(150),
     zipcode VARCHAR(20),
-    
-    -- Geographic coordinates (WGS84)
+
+    -- Geographic coordinates
     lat DOUBLE PRECISION NOT NULL,
     lon DOUBLE PRECISION NOT NULL,
 
-    source VARCHAR(50),
-    source_id VARCHAR(255),
+    source VARCHAR(50),          -- 'paris_musees', 'opendata_paris'
+    source_id VARCHAR(255),      -- ID fourni par l'API
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- INDEX GEO (pour radius search)
 CREATE INDEX idx_venues_lat_lon ON venues(lat, lon);
+CREATE INDEX idx_venues_source_id ON venues(source, source_id);
 
 -- ========================
 --  EXHIBITIONS
@@ -56,7 +62,7 @@ CREATE TABLE exhibitions (
 
     price_min NUMERIC(10,2),
     price_max NUMERIC(10,2),
-    currency VARCHAR(10),
+    currency TEXT,               -- <-- FIX principal (plus d'erreur VARCHAR)
 
     url TEXT,
     image_url TEXT,
@@ -71,7 +77,6 @@ CREATE TABLE exhibitions (
     status VARCHAR(50) CHECK (status IN ('scheduled', 'ongoing', 'finished'))
 );
 
--- Index pour filtrer par source_id
 CREATE INDEX idx_exhibitions_source ON exhibitions(source, source_id);
 
 -- ========================
@@ -83,12 +88,15 @@ CREATE TABLE favorites (
     exhibition_id UUID NOT NULL REFERENCES exhibitions(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT NOW(),
 
-    -- Un utilisateur ne peut pas liker deux fois la même expo
     UNIQUE (user_id, exhibition_id)
 );
 
--- Index utilisateur -> favoris
 CREATE INDEX idx_favorites_user ON favorites(user_id);
-
--- Index expo -> favoris
 CREATE INDEX idx_favorites_exhibition ON favorites(exhibition_id);
+
+
+ALTER TABLE venues
+ADD CONSTRAINT venues_source_uid UNIQUE (source, source_id);
+
+ALTER TABLE exhibitions
+ADD CONSTRAINT exhibitions_source_uid UNIQUE (source, source_id);

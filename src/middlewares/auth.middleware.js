@@ -1,17 +1,33 @@
-import jwt from "jsonwebtoken";
+// src/middlewares/auth.middleware.js
+import { verifyToken } from "../services/jwt.service.js";
+import { findUserById } from "../models/users.model.js";
 
-export function authMiddleware(req, res, next) {
-  const token = req.headers.authorization?.split(" ")[1];
-
-  if (!token) {
-    return res.status(401).json({ error: "Missing token" });
-  }
-
+export async function authRequired(req, res, next) {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // { id, email }
+    const authHeader = req.headers.authorization || "";
+    const [type, token] = authHeader.split(" ");
+
+    if (type !== "Bearer" || !token) {
+      return res.status(401).json({ error: "Token manquant ou invalide" });
+    }
+
+    const decoded = verifyToken(token);
+
+    const user = await findUserById(decoded.id);
+    if (!user) {
+      return res.status(401).json({ error: "Utilisateur non trouvé" });
+    }
+
+    // On met le user dans la requête
+    req.user = {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+    };
+
     next();
   } catch (err) {
-    return res.status(403).json({ error: "Invalid token" });
+    console.error("authRequired error:", err.message);
+    return res.status(401).json({ error: "Token invalide ou expiré" });
   }
 }

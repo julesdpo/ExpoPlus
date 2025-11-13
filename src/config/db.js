@@ -1,4 +1,3 @@
-// src/config/db.js
 import pg from "pg";
 const { Pool } = pg;
 
@@ -15,6 +14,6 @@ export async function connectPostgres() {
     await pool.connect();
     console.log("🐘 Connected to PostgreSQL");
   } catch (err) {
-    console.error("❌ PostgreSQL connection error:", err);
+    console.error("❌ PostgreSQL connection error:", err.message);
   }
 }
