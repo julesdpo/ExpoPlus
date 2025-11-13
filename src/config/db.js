@@ -1,10 +1,10 @@
-import pkg from "pg";
-import dotenv from "dotenv";
-dotenv.config();
+// src/config/db.js
+import pg from "pg";
+const { Pool } = pg;
 
-const { Pool } = pkg;
+console.log("db.js LOADED"); // DEBUG
 
-export const pgPool = new Pool({
+const pool = new Pool({
   host: process.env.POSTGRES_HOST,
   port: process.env.POSTGRES_PORT,
   user: process.env.POSTGRES_USER,
@@ -12,6 +12,11 @@ export const pgPool = new Pool({
   database: process.env.POSTGRES_DB,
 });
 
-pgPool.connect()
-  .then(() => console.log("📦 Connected to PostgreSQL"))
-  .catch(err => console.error("❌ PostgreSQL connection error:", err));
+export async function connectPostgres() {
+  try {
+    await pool.connect();
+    console.log("🐘 Connected to PostgreSQL");
+  } catch (err) {
+    console.error("❌ PostgreSQL connection error:", err);
+  }
+}
