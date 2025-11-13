@@ -13,3 +13,4 @@ export function generateAccessToken(payload) {
 export function generateRefreshToken(payload) {
   return jwt.sign(payload, REFRESH_SECRET, { expiresIn: "30d" });
 }
+
