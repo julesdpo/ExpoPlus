@@ -2,33 +2,35 @@
 import bcrypt from "bcryptjs";
 import {
   generateAccessToken,
-  generateRefreshToken,
+  generateRefreshToken
 } from "../services/jwt.service.js";
 
 import {
   createUser,
   findUserByEmail,
-  findUserById,
+  findUserById
 } from "../models/users.model.js";
 
 import {
   storeRefreshToken,
-  deleteRefreshToken,
   findRefreshToken,
+  deleteRefreshToken,
+  deleteAllUserTokens
 } from "../models/refreshToken.model.js";
 
-import jwt from "jsonwebtoken";
+import { logInfo, logError } from "../utils/logger.js";
 
-/* -------------------------------- REGISTER -------------------------------- */
-
+// ----------------------------
+// REGISTER
+// ----------------------------
 export async function register(req, res) {
   try {
+    logInfo("Register attempt", req);
+
     const { email, password } = req.body;
 
     if (!email || !password || password.length < 6) {
-      return res.status(400).json({
-        error: "Email et mot de passe (min 6 caractères) sont requis",
-      });
+      return res.status(400).json({ error: "Email et mot de passe requis" });
     }
 
     const existing = await findUserByEmail(email);
@@ -39,7 +41,6 @@ export async function register(req, res) {
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await createUser({ email, passwordHash });
 
-    // 🔥 Création des tokens
     const accessToken = generateAccessToken({
       id: user.id,
       email: user.email,
@@ -48,54 +49,49 @@ export async function register(req, res) {
 
     const refreshToken = generateRefreshToken({
       id: user.id,
+      email: user.email
     });
 
-    // 🔐 Stockage sécurisé du refresh token
     await storeRefreshToken(user.id, refreshToken);
 
     res.status(201).json({
       user,
       accessToken,
-      refreshToken,
+      refreshToken
     });
+
   } catch (err) {
-    console.error("register error:", err);
+    logError("Register error: " + err.message, req);
     res.status(500).json({ error: "Erreur serveur" });
   }
 }
 
-/* ---------------------------------- LOGIN --------------------------------- */
-
+// ----------------------------
+// LOGIN
+// ----------------------------
 export async function login(req, res) {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email et mot de passe requis" });
-    }
+    logInfo("Login attempt for " + email, req);
 
     const user = await findUserByEmail(email);
-    if (!user) {
-      return res.status(401).json({ error: "Identifiants invalides" });
-    }
+    if (!user) return res.status(401).json({ error: "Identifiants invalides" });
 
     const isValid = await bcrypt.compare(password, user.password_hash);
-    if (!isValid) {
-      return res.status(401).json({ error: "Identifiants invalides" });
-    }
+    if (!isValid) return res.status(401).json({ error: "Identifiants invalides" });
 
-    // 🔥 Génération access + refresh token
     const accessToken = generateAccessToken({
       id: user.id,
       email: user.email,
-      role: user.role,
+      role: user.role
     });
 
     const refreshToken = generateRefreshToken({
       id: user.id,
+      email: user.email
     });
 
-    // 🔐 Sauvegarde du refresh token (rotation future)
     await storeRefreshToken(user.id, refreshToken);
 
     res.json({
@@ -106,56 +102,74 @@ export async function login(req, res) {
         created_at: user.created_at,
       },
       accessToken,
-      refreshToken,
+      refreshToken
     });
+
   } catch (err) {
-    console.error("login error:", err);
+    logError("Login error: " + err.message, req);
     res.status(500).json({ error: "Erreur serveur" });
   }
 }
 
-/* ------------------------------- REFRESH TOKEN ------------------------------ */
-
+// ----------------------------
+// REFRESH TOKEN
+// ----------------------------
 export async function refresh(req, res) {
   try {
+    logInfo("Refresh token attempt", req);
+
     const { refreshToken } = req.body;
 
-    if (!refreshToken) {
+    if (!refreshToken)
       return res.status(400).json({ error: "refreshToken manquant" });
-    }
 
-    // 1️⃣ Vérifier la validité du refresh token
-    let payload;
-    try {
-      payload = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
-    } catch (err) {
+    // On décode uniquement pour récupérer l'id
+    const decoded = JSON.parse(Buffer.from(refreshToken.split('.')[1], 'base64').toString());
+    const userId = decoded.id;
+
+    const stored = await findRefreshToken(userId, refreshToken);
+    if (!stored) {
       return res.status(401).json({ error: "Refresh token invalide" });
     }
 
-    const userId = payload.id;
-
-    // 2️⃣ Vérifier que le token existe encore en DB (anti-vol)
-    const stored = await findRefreshToken(userId, refreshToken);
-    if (!stored) {
-      return res.status(401).json({ error: "Refresh token non reconnu" });
-    }
-
-    // 3️⃣ Rotation : supprimer l’ancien
+    // Rotation : supprimer l'ancien
     await deleteRefreshToken(userId, refreshToken);
 
-    // 4️⃣ Générer les nouveaux tokens
+    // Générer nouveaux tokens
     const newAccessToken = generateAccessToken({ id: userId });
     const newRefreshToken = generateRefreshToken({ id: userId });
 
-    // 5️⃣ Stocker le nouveau refresh token
     await storeRefreshToken(userId, newRefreshToken);
 
-    return res.json({
+    res.json({
       accessToken: newAccessToken,
-      refreshToken: newRefreshToken,
+      refreshToken: newRefreshToken
     });
+
   } catch (err) {
-    console.error("refresh error:", err);
+    logError("Refresh error: " + err.message, req);
     res.status(500).json({ error: "Erreur serveur" });
   }
+}
+
+// ----------------------------
+// LOGOUT (requires auth)
+// ----------------------------
+export async function logout(req, res) {
+  try {
+    logInfo("Logout", req);
+
+    await deleteAllUserTokens(req.user.id);
+    res.json({ message: "Déconnecté" });
+  } catch (err) {
+    logError("Logout error: " + err.message, req);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+}
+
+// ----------------------------
+// ME
+// ----------------------------
+export async function me(req, res) {
+  res.json({ user: req.user });
 }

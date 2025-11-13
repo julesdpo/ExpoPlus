@@ -9,17 +9,13 @@ export function hashToken(token) {
 /** Enregistre ou remplace le refresh token d’un user */
 export async function storeRefreshToken(userId, token) {
   const tokenHash = hashToken(token);
-
   await pool.query(
-    `
-    INSERT INTO refresh_tokens (user_id, token_hash)
-    VALUES ($1, $2)
-    ON CONFLICT (user_id)
-    DO UPDATE SET token_hash = EXCLUDED.token_hash, created_at = NOW()
-    `,
+    `INSERT INTO refresh_tokens (user_id, token_hash)
+     VALUES ($1, $2)`,
     [userId, tokenHash]
   );
 }
+
 
 /** Vérifie si le refresh token fourni correspond à celui stocké */
 export async function findRefreshToken(userId, token) {

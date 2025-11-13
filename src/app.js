@@ -3,6 +3,7 @@ import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 import router from "./routes/index.js";
+import { swaggerSpec, swaggerUi } from "./config/swagger.js";
 
 const app = express();
 
@@ -13,6 +14,9 @@ const __dirname = path.dirname(__filename);
 // Middlewares
 app.use(cors());
 app.use(express.json());
+
+// Swagger route
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Static files
 app.use(express.static(path.join(__dirname, "public")));

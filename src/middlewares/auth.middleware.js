@@ -11,16 +11,13 @@ export async function authRequired(req, res, next) {
       return res.status(401).json({ error: "Token manquant ou invalide" });
     }
 
-    // Vérifie le token
-    const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET); // <<< ICI
 
-    // On vérifie que l'utilisateur existe toujours
     const user = await findUserById(decoded.id);
     if (!user) {
       return res.status(401).json({ error: "Utilisateur non trouvé" });
     }
 
-    // Injection dans req.user
     req.user = {
       id: user.id,
       email: user.email,

@@ -1,3 +1,24 @@
+/**
+ * @swagger
+ * /api/favorites:
+ *   get:
+ *     summary: Liste des favoris de l'utilisateur connecté
+ *     tags: [Favorites]
+ *     security:
+ *       - bearerAuth: []
+ */
+
+/**
+ * @swagger
+ * /api/favorites/{eventId}:
+ *   post:
+ *     summary: Ajouter un event aux favoris
+ *     tags: [Favorites]
+ *     security:
+ *       - bearerAuth: []
+ */
+
+
 // src/routes/favorites.routes.js
 import { Router } from "express";
 import {

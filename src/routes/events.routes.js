@@ -1,3 +1,15 @@
+/**
+ * @swagger
+ * /api/events:
+ *   get:
+ *     summary: Liste des événements
+ *     tags: [Events]
+ *     responses:
+ *       200:
+ *         description: Retourne tous les events
+ */
+
+
 import { Router } from "express";
 import { pool } from "../config/db.js";  // ← CORRECT
 import { importParisData } from "../services/ingestionService.js";

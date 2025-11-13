@@ -1,3 +1,14 @@
+/**
+ * @swagger
+ * /api/users:
+ *   get:
+ *     summary: Liste des utilisateurs (admin)
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ */
+
+
 import { Router } from "express";
 import {
   listUsers,
