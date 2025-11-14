@@ -1,82 +1,85 @@
 // src/controllers/auth.controller.js
+
 import bcrypt from "bcryptjs";
 import {
   generateAccessToken,
-  generateRefreshToken
+  generateRefreshToken,
 } from "../services/jwt.service.js";
-
 import {
   createUser,
   findUserByEmail,
-  findUserById
+  findUserById,
 } from "../models/users.model.js";
-
 import {
   storeRefreshToken,
   findRefreshToken,
   deleteRefreshToken,
-  deleteAllUserTokens
+  deleteAllUserTokens,
 } from "../models/refreshToken.model.js";
-
-import { logInfo, logError } from "../utils/logger.js";
+import { logError } from "../utils/logger.js";
 
 // =========================================================
-// REGISTER
+// REGISTER (AVEC DÉBOGAGE)
 // =========================================================
 export async function register(req, res) {
-  console.log("[REGISTER] Request body =", req.body);
+  console.log("\n--- [REGISTER START] ---");
+  console.log("1. Requête reçue sur /register. Body:", req.body);
 
   try {
     const { email, password } = req.body;
-    console.log("[REGISTER] email =", email, "password =", password);
-
     if (!email || !password || password.length < 6) {
-      console.log("[REGISTER] Invalid fields");
-      return res.status(400).json({ error: "Email et mot de passe requis" });
+      console.log("❌ ERREUR : Champs invalides.");
+      return res.status(400).json({ error: "Email et mot de passe (6+ caractères) requis." });
     }
+    console.log("2. Champs validés. Email:", email);
 
+    console.log("3. Appel de findUserByEmail pour vérifier l'existence...");
     const existing = await findUserByEmail(email);
-    console.log("[REGISTER] existing =", existing);
+    console.log("4. findUserByEmail a retourné:", existing);
 
     if (existing) {
-      console.log("[REGISTER] Email déjà utilisé");
-      return res.status(409).json({ error: "Cet email est déjà utilisé" });
+      console.log("❌ ERREUR : L'email existe déjà.");
+      return res.status(409).json({ error: "Cet email est déjà utilisé." });
     }
+    console.log("5. L'utilisateur n'existe pas, continuation...");
 
-    console.log("[REGISTER] Hashing password...");
+    console.log("6. Hashage du mot de passe...");
     const passwordHash = await bcrypt.hash(password, 10);
-    console.log("[REGISTER] passwordHash =", passwordHash);
+    console.log("7. Mot de passe hashé avec succès.");
 
-    console.log("[REGISTER] Creating user in DB...");
+    console.log("8. Appel de createUser...");
     const user = await createUser({ email, passwordHash });
-    console.log("[REGISTER] register => user created =", user);
+    console.log("9. createUser a retourné:", user);
 
-    // JWT Tokens
-    const accessToken = generateAccessToken({
-      id: user.id,
-      email: user.email,
-      role: user.role
-    });
+    if (!user || !user.id) {
+        console.log("❌ ERREUR CRITIQUE : createUser n'a pas retourné un utilisateur valide.");
+        throw new Error("La création de l'utilisateur a échoué sans erreur explicite.");
+    }
+    console.log("10. Utilisateur créé avec succès en base de données.");
 
-    const refreshToken = generateRefreshToken({
-      id: user.id,
-      email: user.email
-    });
+    console.log("11. Génération du Access Token...");
+    const accessToken = generateAccessToken({ id: user.id, email: user.email, role: user.role });
+    console.log("12. Access Token généré.");
 
-    console.log("[REGISTER] Storing refresh token...");
+    console.log("13. Génération du Refresh Token...");
+    const refreshToken = generateRefreshToken({ id: user.id, email: user.email });
+    console.log("14. Refresh Token généré.");
+
+    console.log("15. Appel de storeRefreshToken...");
     await storeRefreshToken(user.id, refreshToken);
-    console.log("[REGISTER] Refresh token stored");
+    console.log("16. Refresh Token stocké avec succès.");
 
-    res.status(201).json({
-      user,
-      accessToken,
-      refreshToken
-    });
+    console.log("17. Envoi de la réponse 201 (Created).");
+    console.log("--- [REGISTER SUCCESS] ---");
+    res.status(201).json({ user, accessToken, refreshToken });
 
   } catch (err) {
-    console.log("[REGISTER ERROR] =", err);
+    console.error("\n💥💥💥 [REGISTER CATCH ERROR] 💥💥💥");
+    console.error("L'erreur est survenue après le dernier log numéroté.");
+    console.error("Erreur complète:", err);
+    console.error("--- [REGISTER END WITH FAILURE] ---\n");
     logError("Register error: " + err.message, req);
-    res.status(500).json({ error: "Erreur serveur" });
+    res.status(500).json({ error: "Erreur interne du serveur." });
   }
 }
 
@@ -84,61 +87,38 @@ export async function register(req, res) {
 // LOGIN
 // =========================================================
 export async function login(req, res) {
-  console.log("[LOGIN] Request body =", req.body);
-
+  console.log("[LOGIN] Requête reçue :", req.body);
   try {
     const { email, password } = req.body;
-    console.log("[LOGIN] email =", email, "password =", password);
-
     const user = await findUserByEmail(email);
-    console.log("[LOGIN] findUserByEmail =>", user);
 
     if (!user) {
-      console.log("[LOGIN] User NOT found");
-      return res.status(401).json({ error: "Identifiants invalides" });
+      console.log("[LOGIN] Utilisateur non trouvé.");
+      return res.status(401).json({ error: "Identifiants invalides." });
     }
-
-    console.log("[LOGIN] Comparing passwords...");
-    console.log("[LOGIN] hash in DB =", user.password_hash);
 
     const isValid = await bcrypt.compare(password, user.password_hash);
-    console.log("[LOGIN] password match =", isValid);
-
     if (!isValid) {
-      console.log("[LOGIN] Invalid password");
-      return res.status(401).json({ error: "Identifiants invalides" });
+      console.log("[LOGIN] Mot de passe incorrect.");
+      return res.status(401).json({ error: "Identifiants invalides." });
     }
+    
+    console.log("[LOGIN] Connexion réussie pour :", user.email);
+    const accessToken = generateAccessToken({ id: user.id, email: user.email, role: user.role });
+    const refreshToken = generateRefreshToken({ id: user.id, email: user.email });
 
-    const accessToken = generateAccessToken({
-      id: user.id,
-      email: user.email,
-      role: user.role
-    });
-
-    const refreshToken = generateRefreshToken({
-      id: user.id,
-      email: user.email
-    });
-
-    console.log("[LOGIN] Storing refresh token...");
+    await deleteAllUserTokens(user.id);
     await storeRefreshToken(user.id, refreshToken);
-    console.log("[LOGIN] Refresh token stored");
 
     res.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        created_at: user.created_at
-      },
+      user: { id: user.id, email: user.email, role: user.role, created_at: user.created_at },
       accessToken,
-      refreshToken
+      refreshToken,
     });
-
   } catch (err) {
-    console.log("[LOGIN ERROR] =", err);
+    console.error("[LOGIN ERROR]", err);
     logError("Login error: " + err.message, req);
-    res.status(500).json({ error: "Erreur serveur" });
+    res.status(500).json({ error: "Erreur interne du serveur." });
   }
 }
 
@@ -147,39 +127,22 @@ export async function login(req, res) {
 // =========================================================
 export async function refresh(req, res) {
   console.log("[REFRESH] body =", req.body);
-
   try {
     const { refreshToken } = req.body;
+    if (!refreshToken) return res.status(400).json({ error: "refreshToken manquant" });
 
-    if (!refreshToken)
-      return res.status(400).json({ error: "refreshToken manquant" });
-
-    console.log("[REFRESH] Decoding refresh token...");
     const decoded = JSON.parse(Buffer.from(refreshToken.split('.')[1], 'base64').toString());
-    console.log("[REFRESH] decoded =", decoded);
-
     const userId = decoded.id;
-
     const stored = await findRefreshToken(userId, refreshToken);
-    console.log("[REFRESH] stored refresh token =", stored);
 
-    if (!stored) {
-      console.log("[REFRESH] Invalid stored token");
-      return res.status(401).json({ error: "Refresh token invalide" });
-    }
+    if (!stored) return res.status(401).json({ error: "Refresh token invalide" });
 
     await deleteRefreshToken(userId, refreshToken);
-
     const newAccessToken = generateAccessToken({ id: userId });
     const newRefreshToken = generateRefreshToken({ id: userId });
-
     await storeRefreshToken(userId, newRefreshToken);
 
-    res.json({
-      accessToken: newAccessToken,
-      refreshToken: newRefreshToken
-    });
-
+    res.json({ accessToken: newAccessToken, refreshToken: newRefreshToken });
   } catch (err) {
     console.log("[REFRESH ERROR] =", err);
     logError("Refresh error: " + err.message, req);
@@ -193,10 +156,8 @@ export async function refresh(req, res) {
 export async function logout(req, res) {
   try {
     console.log("[LOGOUT] user id =", req.user.id);
-
     await deleteAllUserTokens(req.user.id);
     res.json({ message: "Déconnecté" });
-
   } catch (err) {
     console.log("[LOGOUT ERROR] =", err);
     logError("Logout error: " + err.message, req);
