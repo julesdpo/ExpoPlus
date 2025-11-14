@@ -1,23 +1,11 @@
--- =============================================================
---  🚀 CULTURAL EXPLORER — PostgreSQL Schema (VERSION STABLE)
---  Designed for OpenData Paris + Paris Musées
--- =============================================================
-
--- ========================
---  CLEAN PREVIOUS SCHEMA
--- ========================
 DROP SCHEMA IF EXISTS public CASCADE;
 CREATE SCHEMA public;
 
--- ========================
---  EXTENSIONS
--- ========================
+
 -- Vérifie que l'extension uuid-ossp est installée
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- ========================
 --  USERS
--- ========================
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -26,9 +14,7 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- ========================
 --  VENUES
--- ========================
 CREATE TABLE venues (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
@@ -48,9 +34,7 @@ CREATE TABLE venues (
 CREATE INDEX idx_venues_lat_lon ON venues(lat, lon);
 CREATE INDEX idx_venues_source_id ON venues(source, source_id);
 
--- ========================
 --  EXHIBITIONS
--- ========================
 CREATE TABLE exhibitions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     venue_id UUID REFERENCES venues(id) ON DELETE SET NULL,
@@ -63,8 +47,7 @@ CREATE TABLE exhibitions (
 
     price_min NUMERIC(10,2),
     price_max NUMERIC(10,2),
-    currency TEXT,               -- <-- FIX principal (plus d'erreur VARCHAR)
-
+    currency TEXT, 
     url TEXT,
     image_url TEXT,
 
@@ -80,9 +63,7 @@ CREATE TABLE exhibitions (
 
 CREATE INDEX idx_exhibitions_source ON exhibitions(source, source_id);
 
--- ========================
 --  FAVORITES
--- ========================
 CREATE TABLE favorites (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -95,9 +76,7 @@ CREATE TABLE favorites (
 CREATE INDEX idx_favorites_user ON favorites(user_id);
 CREATE INDEX idx_favorites_exhibition ON favorites(exhibition_id);
 
--- ========================
 --  CONSTRAINTS
--- ========================
 -- Unique constraint on source_id to avoid duplicates
 ALTER TABLE venues
 ADD CONSTRAINT venues_source_uid UNIQUE (source, source_id);
