@@ -5,27 +5,23 @@ API REST complète pour la gestion d'expositions culturelles, favoris et authent
 ## Fonctionnalités principales
 
 * **Authentification JWT complète :**
-
   * Register / Login
   * Access + Refresh tokens (rotation sécurisée)
   * Logout + invalidation des tokens
   * Rôles `user` et `admin`
 * **Sécurité avancée :**
-
   * CORS configuré
   * Rate limiting sur `/auth/login`
   * Hashing des mots de passe (bcrypt)
   * Vérification des permissions
 * **Données culturelles :**
-
-  * Import OpenData Paris / Paris Musées
+  * Import OpenData Paris
   * Stockage normalisé (venues + exhibitions)
+  * **Ingestion automatique via Cron** (tous les jours à 2h du matin)
 * **Favoris utilisateur :**
-
   * Ajouter / retirer une exposition
   * Listing personnalisé
 * **Logs MongoDB :**
-
   * Logs informations
   * Logs erreurs
   * Méthode, URL, userId, timestamp
@@ -49,7 +45,10 @@ ExpoPlus/
 │   │   └── swagger.js
 │   ├── controllers/
 │   │   ├── auth.controller.js
-│   │   └── favorites.controller.js
+│   │   ├── events.controller.js
+│   │   ├── favorites.controller.js
+│   │   ├── users.controller.js
+│   │   └── venues.controller.js
 │   ├── middlewares/
 │   │   ├── admin.middleware.js
 │   │   ├── auth.middleware.js
@@ -93,7 +92,7 @@ ExpoPlus/
 ├── docker-compose.yml
 ├── package-lock.json
 ├── package.json
-└── readme.md
+└── README.md
 ```
 
 Architecture **REST + MVC + Services**.
@@ -188,7 +187,7 @@ npm install
 Mode normal :
 
 ```bash
-npm start
+node src/server.js
 ```
 
 Mode développement (nodemon) :
@@ -203,9 +202,27 @@ Le serveur démarre sur :
 http://localhost:4000
 ```
 
+**Important :** Le serveur lance automatiquement une tâche planifiée (cron) qui importe les données depuis OpenData Paris tous les jours à 2h du matin. Vous n'avez rien à faire, c'est automatique !
+
 ---
 
-## 6. Documentation Swagger
+## 6. Importer les données manuellement (optionnel)
+
+Si vous voulez importer les données tout de suite sans attendre le cron :
+
+```bash
+npm run ingest
+```
+
+Ou via l'API :
+
+```bash
+POST /api/events/import/paris
+```
+
+---
+
+## 7. Documentation Swagger
 
 Une fois le serveur démarré, accéder à :
 
@@ -215,7 +232,7 @@ Tu y trouveras toutes les routes : Auth / Users / Events / Favorites + exemples.
 
 ---
 
-## 7. Authentification – Flow complet
+## 8. Authentification – Flow complet
 
 ### Register
 
@@ -281,7 +298,7 @@ Supprime tous les refresh tokens du user.
 
 ---
 
-## 8. Scripts utiles
+## 9. Scripts utiles
 
 ### Supprimer les conteneurs
 
@@ -302,9 +319,15 @@ docker compose up --build -d
 npm run dev
 ```
 
+### Importer les données manuellement
+
+```bash
+npm run ingest
+```
+
 ---
 
-## 9. Accéder aux logs MongoDB
+## 10. Accéder aux logs MongoDB
 
 Connexion au conteneur :
 
@@ -321,7 +344,7 @@ db.logs.find().pretty()
 
 ---
 
-## 10. Routes principales
+## 11. Routes principales
 
 ### Auth
 
@@ -334,7 +357,7 @@ db.logs.find().pretty()
 ### Expositions
 
 * `GET /api/events` - Liste des expositions
-* `POST /api/events/import/paris` - Importer depuis OpenData Paris
+* `POST /api/events/import/paris` - Importer depuis OpenData Paris (manuel)
 
 ### Favoris
 
@@ -349,7 +372,7 @@ db.logs.find().pretty()
 
 ---
 
-## 11. Technologies utilisées
+## 12. Technologies utilisées
 
 | Technologie                    | Rôle                                                          |
 | ------------------------------ | -------------------------------------------------------------- |
@@ -361,11 +384,40 @@ db.logs.find().pretty()
 | **Swagger**              | Documentation API interactive                                  |
 | **Mongoose**             | ODM pour MongoDB                                               |
 | **express-rate-limit**   | Protection contre le brute-force                               |
+| **node-cron**            | Planification de tâches automatiques                           |
 | **Docker Compose**       | Orchestration des conteneurs                                   |
 
 ---
 
-## 12. Objectif pédagogique
+## 13. Système d'ingestion automatique (Cron)
+
+Le serveur intègre un système de tâche planifiée qui :
+
+- Se lance automatiquement au démarrage du serveur
+- Exécute l'import des données depuis OpenData Paris tous les jours à **2h00 du matin** (timezone Europe/Paris)
+- Enregistre chaque exécution dans MongoDB (table `ingestion_runs`)
+- Gère les erreurs et continue de fonctionner même en cas d'échec
+
+Le code de la tâche planifiée se trouve dans `src/server.js` :
+
+```javascript
+cron.schedule('0 2 * * *', async () => {
+  console.log("--- [CRON JOB] Starting scheduled data ingestion ---");
+  try {
+    await importParisData();
+    console.log("--- [CRON JOB] Finished successfully ---");
+  } catch (error) {
+    console.error("--- [CRON JOB] An error occurred ---", error);
+  }
+}, {
+  scheduled: true,
+  timezone: "Europe/Paris"
+});
+```
+
+---
+
+## 14. Objectif pédagogique
 
 Ce projet démontre :
 
@@ -376,12 +428,13 @@ Ce projet démontre :
 * Une documentation technique professionnelle avec Swagger
 * Des logs exploités en production
 * De la rigueur dans la structure du code
+* L'automatisation de tâches récurrentes avec node-cron
 
 ---
 
-## 13. Auteurs
+## 15. Auteurs
 
-Projet réalisé par Vincent LEBEL & Jules DUPONT**.**
+Projet réalisé par **Vincent LEBEL & Jules DUPONT**.
 
 ---
 
