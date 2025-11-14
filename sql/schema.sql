@@ -6,12 +6,13 @@
 -- ========================
 --  CLEAN PREVIOUS SCHEMA
 -- ========================
-DROP SCHEMA public CASCADE;
+DROP SCHEMA IF EXISTS public CASCADE;
 CREATE SCHEMA public;
 
 -- ========================
 --  EXTENSIONS
 -- ========================
+-- Vérifie que l'extension uuid-ossp est installée
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ========================
@@ -94,7 +95,10 @@ CREATE TABLE favorites (
 CREATE INDEX idx_favorites_user ON favorites(user_id);
 CREATE INDEX idx_favorites_exhibition ON favorites(exhibition_id);
 
-
+-- ========================
+--  CONSTRAINTS
+-- ========================
+-- Unique constraint on source_id to avoid duplicates
 ALTER TABLE venues
 ADD CONSTRAINT venues_source_uid UNIQUE (source, source_id);
 
