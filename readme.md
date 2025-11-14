@@ -5,30 +5,30 @@ API REST complète pour la gestion d'expositions culturelles, favoris et authent
 ## Fonctionnalités principales
 
 * **Authentification JWT complète :**
+
   * Register / Login
   * Access + Refresh tokens (rotation sécurisée)
   * Logout + invalidation des tokens
   * Rôles `user` et `admin`
-
 * **Sécurité avancée :**
+
   * CORS configuré
   * Rate limiting sur `/auth/login`
   * Hashing des mots de passe (bcrypt)
   * Vérification des permissions
-
 * **Données culturelles :**
+
   * Import OpenData Paris / Paris Musées
   * Stockage normalisé (venues + exhibitions)
-
 * **Favoris utilisateur :**
+
   * Ajouter / retirer une exposition
   * Listing personnalisé
-
 * **Logs MongoDB :**
+
   * Logs informations
   * Logs erreurs
   * Méthode, URL, userId, timestamp
-
 * **Documentation Swagger complète**
 
 ---
@@ -265,6 +265,7 @@ Content-Type: application/json
 ```
 
 Nouvelle rotation :
+
 - Ancien token supprimé
 - Nouveau refresh token
 - Nouveau access token
@@ -350,17 +351,17 @@ db.logs.find().pretty()
 
 ## 11. Technologies utilisées
 
-| Technologie | Rôle |
-|------------|------|
-| **Node.js / Express.js** | Framework backend |
-| **PostgreSQL** | Base de données relationnelle (users, exhibitions, favorites) |
-| **MongoDB** | Base de données NoSQL (logs) |
-| **JWT** | Authentification stateless |
-| **bcryptjs** | Hashing des mots de passe |
-| **Swagger** | Documentation API interactive |
-| **Mongoose** | ODM pour MongoDB |
-| **express-rate-limit** | Protection contre le brute-force |
-| **Docker Compose** | Orchestration des conteneurs |
+| Technologie                    | Rôle                                                          |
+| ------------------------------ | -------------------------------------------------------------- |
+| **Node.js / Express.js** | Framework backend                                              |
+| **PostgreSQL**           | Base de données relationnelle (users, exhibitions, favorites) |
+| **MongoDB**              | Base de données NoSQL (logs)                                  |
+| **JWT**                  | Authentification stateless                                     |
+| **bcryptjs**             | Hashing des mots de passe                                      |
+| **Swagger**              | Documentation API interactive                                  |
+| **Mongoose**             | ODM pour MongoDB                                               |
+| **express-rate-limit**   | Protection contre le brute-force                               |
+| **Docker Compose**       | Orchestration des conteneurs                                   |
 
 ---
 
@@ -380,7 +381,7 @@ Ce projet démontre :
 
 ## 13. Auteurs
 
-Projet réalisé par **Jules D.**
+Projet réalisé par Vincent LEBEL & Jules DUPONT**.**
 
 ---
 
