@@ -23,7 +23,7 @@ export async function importParisEvents() {
     console.log("📡 Fetching Paris OpenData...");
 
     const url =
-      "https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/que-faire-a-paris-/records?limit=200";
+      "https://opendata.paris.fr/api/explore/v2.1/catalog/datasets/que-faire-a-paris-/records?limit=20";
 
     const { data } = await axios.get(url);
 
