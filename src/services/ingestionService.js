@@ -1,6 +1,9 @@
 // src/services/ingestionService.js
+import "dotenv/config";
 import { pool } from "../config/db.js";
 import IngestionRun from "../models/ingestionRun.model.js";
+import path from "path";
+import { fileURLToPath } from "url";
 
 // Node 22 => fetch global dispo, pas besoin de node-fetch
 const API_URL =
@@ -66,7 +69,7 @@ async function upsertVenue(ev) {
   const query = `
     INSERT INTO venues (name, address, city, zipcode, lat, lon, source, source_id)
     VALUES ($1,$2,$3,$4,$5,$6,'paris-opendata',$7)
-    ON CONFLICT (source_id)
+    ON CONFLICT (source, source_id)
     DO UPDATE SET
       name    = EXCLUDED.name,
       address = EXCLUDED.address,
@@ -76,7 +79,7 @@ async function upsertVenue(ev) {
       lon     = EXCLUDED.lon,
       updated_at = NOW()
     RETURNING id;
-  `;
+`;
 
   const values = [
     ev.address_name || ev.title || "Sans nom",
@@ -154,4 +157,16 @@ function computeStatus(start, end) {
   if (start && today < start) return "scheduled";
   if (end && today > end) return "finished";
   return "ongoing";
+}
+
+// Lancement direct du script si exécuté depuis Node
+const __filename = fileURLToPath(import.meta.url);
+
+if (process.argv[1] === __filename) {
+  (async () => {
+    console.log("📥 Lancement de l’ingestion des données Paris...");
+    await importParisData();
+    console.log("🏁 Ingestion terminée !");
+    process.exit(0);
+  })();
 }

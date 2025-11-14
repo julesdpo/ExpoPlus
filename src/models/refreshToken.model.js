@@ -1,54 +1,39 @@
+// src/models/refreshToken.model.js
 import { pool } from "../config/db.js";
-import crypto from "crypto";
 
-/** Hash SHA-256 pour sécuriser le refresh token */
-export function hashToken(token) {
-  return crypto.createHash("sha256").update(token).digest("hex");
-}
-
-/** Enregistre ou remplace le refresh token d’un user */
 export async function storeRefreshToken(userId, token) {
-  const tokenHash = hashToken(token);
-  await pool.query(
-    `INSERT INTO refresh_tokens (user_id, token_hash)
-     VALUES ($1, $2)`,
-    [userId, tokenHash]
-  );
+  console.log("📌 Inserting refresh token into DB...");
+  const query = `
+    INSERT INTO refresh_tokens (user_id, token)
+    VALUES ($1, $2)
+  `;
+  await pool.query(query, [userId, token]);
 }
 
-
-/** Vérifie si le refresh token fourni correspond à celui stocké */
 export async function findRefreshToken(userId, token) {
-  const tokenHash = hashToken(token);
-
-  const result = await pool.query(
-    `
+  console.log("📌 Searching refresh token...");
+  const query = `
     SELECT * FROM refresh_tokens
-    WHERE user_id = $1 AND token_hash = $2
-    `,
-    [userId, tokenHash]
-  );
-
-  return result.rows[0] || null;
+    WHERE user_id = $1 AND token = $2
+  `;
+  const { rows } = await pool.query(query, [userId, token]);
+  return rows[0];
 }
 
-/** Supprime UNIQUEMENT le refresh token donné */
 export async function deleteRefreshToken(userId, token) {
-  const tokenHash = hashToken(token);
-
-  await pool.query(
-    `
+  console.log("📌 Deleting refresh token...");
+  const query = `
     DELETE FROM refresh_tokens
-    WHERE user_id = $1 AND token_hash = $2
-    `,
-    [userId, tokenHash]
-  );
+    WHERE user_id = $1 AND token = $2
+  `;
+  await pool.query(query, [userId, token]);
 }
 
-/** Déconnecte totalement l'utilisateur (logout everywhere) */
 export async function deleteAllUserTokens(userId) {
-  await pool.query(
-    `DELETE FROM refresh_tokens WHERE user_id = $1`,
-    [userId]
-  );
+  console.log("📌 Deleting ALL refresh tokens for user:", userId);
+  const query = `
+    DELETE FROM refresh_tokens
+    WHERE user_id = $1
+  `;
+  await pool.query(query, [userId]);
 }

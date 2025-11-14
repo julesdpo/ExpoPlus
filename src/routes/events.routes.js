@@ -92,7 +92,7 @@ const router = Router();
 
 router.get("/", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM exhibitions LIMIT 20");
+    const result = await pool.query("SELECT * FROM exhibitions LIMIT 100");
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
